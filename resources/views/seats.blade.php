@@ -28,6 +28,10 @@
         <button type="submit" class="btn btn-primary" id="reserveButton" disabled>Foglalás</button>
     </form>
 
+    <form method="GET" action="{{ route('reset') }}" >
+        <button>Reset</button>
+    </form>
+
     {{-- <script src="{{ asset('js/formValidation.js') }}"></script> --}}
     <script src="../js/formValidation.js"></script>
 @endsection

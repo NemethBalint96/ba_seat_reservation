@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Seat;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
 
 class SeatController extends Controller
 {
@@ -37,6 +39,26 @@ class SeatController extends Controller
             $seat->reserve();
         }
 
-        return redirect()->back()->with('success', 'Seats reserved successfully.');
+        $expiresAt = now()->addMinutes(2);
+
+        Cache::put('reserved_seats', $selectedSeats, 10);
+
+        return redirect('payment-form');
+    }
+
+    public function paymentForm(Request $request)
+    {
+        $number = Cache::get('reserved_seats');
+
+        return view('payment', ['msg' => json_encode($number)]);
+    }
+
+    public function payment(Request $request)
+    {
+        $email = $request->input('email');
+
+        $number = Cache::get('reserved_seats');
+
+        return $number;
     }
 }

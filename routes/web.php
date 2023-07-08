@@ -21,6 +21,20 @@ Route::get('/', [SeatController::class, 'home'])->name('home');
 
 Route::post('/reserve-seats', [SeatController::class, 'reserveSeats'])->name('reserve-seats');
 
+Route::get('/payment-form', [SeatController::class, 'paymentForm'])->name('payment-form');
+
+Route::post('/payment', [SeatController::class, 'payment'])->name('payment');
+
+Route::get('/reset', function() {
+  $seats = Seat::all();
+
+  foreach ($seats as $seat) {
+    $seat->status = "szabad";
+    $seat->save();
+  }
+  return redirect('/');
+})->name('reset');
+
 Route::get('/testroute', function() {
   $seats = Seat::all();
 
