@@ -26,4 +26,13 @@ class Seat extends Model
         }
         return null;
     }
+
+    public function isAvailable()
+    {
+        if ($this->status === 'szabad') {
+            return true;
+        }
+
+        return false;
+    }
 }
