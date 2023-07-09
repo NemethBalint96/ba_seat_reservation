@@ -6,6 +6,7 @@ use App\Models\Seat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
+use App\Jobs\SeatRelease;
 
 class SeatController extends Controller
 {
@@ -42,6 +43,10 @@ class SeatController extends Controller
         $expiresAt = now()->addMinutes(2);
 
         Cache::put('reserved_seats', $selectedSeats, 10);
+
+        $dateTime = \Carbon\Carbon::now();
+
+        SeatRelease::dispatch()->delay($dateTime->addSeconds(5));
 
         return redirect('payment-form');
     }
