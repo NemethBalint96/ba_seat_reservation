@@ -3,67 +3,52 @@
 namespace App\Http\Controllers;
 
 use App\Models\Seat;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Cache;
 use App\Jobs\SeatRelease;
+use App\Jobs\SendEmail;
+use App\Http\Requests\ReservationValidation;
+use App\Http\Requests\PaymentValidation;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class SeatController extends Controller
 {
-    public function home()
+    public function home(): View
     {
-        // Fetch all seats from the database
         $seats = Seat::all();
 
-        // Pass the seats to the view
         return view('seats', ['seats' => $seats]);
     }
 
-    public function reserveSeats(Request $request)
+    public function reserveSeats(ReservationValidation $request): RedirectResponse
     {
-        // Validate the form data if needed
-        $selectedSeats = $request->input('seats');
-
-        // Check if the selected seats are available
-        $availableSeats = Seat::whereIn('id', $selectedSeats)
-            ->where('status', 'szabad')
-            ->get();
-
-        if ($availableSeats->count() !== count($selectedSeats)) {
-            return redirect()->back()->with('error', 'Some seats are no longer available.');
+        $selectedSeats = $request->validated('seats');
+        if (!Seat::reserveSeats($selectedSeats)) {
+            return redirect()->route('home')->with('error', 'Foglalt széket próbál lefoglalni.');
         }
 
-        // Perform the seat reservation logic here
-        foreach ($selectedSeats as $seatId) {
-            $seat = Seat::find($seatId);
+        $timeForReservation = now()->addMinutes(2);
+        Cache::put('reserved_seats', $selectedSeats, $timeForReservation);
+        dispatch(new SeatRelease($selectedSeats))->delay($timeForReservation);
 
-            $seat->reserve();
-        }
-
-        $expiresAt = now()->addMinutes(2);
-
-        Cache::put('reserved_seats', $selectedSeats, 10);
-
-        $dateTime = \Carbon\Carbon::now();
-
-        SeatRelease::dispatch()->delay($dateTime->addSeconds(5));
-
-        return redirect('payment-form');
+        return redirect()->route('payment-form');
     }
 
-    public function paymentForm(Request $request)
+    public function paymentForm(): View
     {
-        $number = Cache::get('reserved_seats');
+        $seats = Cache::get('reserved_seats');
 
-        return view('payment', ['msg' => json_encode($number)]);
+        return view('payment', ['seats' => $seats]);
     }
 
-    public function payment(Request $request)
+    public function payment(PaymentValidation $request): RedirectResponse
     {
-        $email = $request->input('email');
+        $email = $request->validated('email');
+        $seats = Cache::get('reserved_seats');
+        $reservedSeats = Seat::sellSeats($seats);
 
-        $number = Cache::get('reserved_seats');
+        dispatch(new SendEmail($email, $reservedSeats));
 
-        return $number;
+        return redirect()->route('home')->with('success', 'Sikeres vásárlás! Visszaigazoló e-mail elküldve.');
     }
 }

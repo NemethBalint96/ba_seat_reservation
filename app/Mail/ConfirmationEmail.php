@@ -5,50 +5,34 @@ namespace App\Mail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Database\Eloquent\Collection;
 
-class ConfirmationEmail extends Mailable
+class ConfirmationEmail extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
+    private Collection $seats;
+
     /**
      * Create a new message instance.
-     */
-    public function __construct(private $seats)
-    {
-        //
-    }
-
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
-    {
-        return new Envelope(
-            subject: 'Székfoglalás visszaigazolás',
-        );
-    }
-
-    /**
-     * Get the message content definition.
-     */
-    public function content(): Content
-    {
-        return new Content(
-            view: 'mail.email',
-            with: ['seats' => $this->seats],
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
      *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
+     * @param  array  $seats
      */
-    public function attachments(): array
+    public function __construct(Collection $seats)
     {
-        return [];
+        $this->seats = $seats;
+    }
+
+    /**
+     * Build the message.
+     *
+     * @return $this
+     */
+    public function build()
+    {
+        return $this->subject('Székfoglalás visszaigazolás')
+            ->view('mail.email')
+            ->with('seats', $this->seats);
     }
 }

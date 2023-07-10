@@ -2,9 +2,7 @@
 
 use App\Http\Controllers\SeatController;
 use Illuminate\Support\Facades\Route;
-use App\Mail\ConfirmationEmail;
-use Illuminate\Support\Facades\Mail;
-use App\Models\Seat;
+use App\Http\Middleware\CheckOrderCache;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,26 +16,9 @@ use App\Models\Seat;
 */
 
 Route::get('/', [SeatController::class, 'home'])->name('home');
-
 Route::post('/reserve-seats', [SeatController::class, 'reserveSeats'])->name('reserve-seats');
 
-Route::get('/payment-form', [SeatController::class, 'paymentForm'])->name('payment-form');
-
-Route::post('/payment', [SeatController::class, 'payment'])->name('payment');
-
-Route::get('/reset', function() {
-  $seats = Seat::all();
-
-  foreach ($seats as $seat) {
-    $seat->status = "szabad";
-    $seat->save();
-  }
-  return redirect('/');
-})->name('reset');
-
-Route::get('/testroute', function() {
-  $seats = Seat::all();
-
-  // The email sending is done using the to method on the Mail facade
-  Mail::to('n.b.boss@hotmail.com')->send(new ConfirmationEmail($seats));
+Route::middleware([CheckOrderCache::class])->group(function () {
+    Route::get('/payment-form', [SeatController::class, 'paymentForm'])->name('payment-form');
+    Route::post('/payment', [SeatController::class, 'payment'])->name('payment');
 });
